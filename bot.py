@@ -1,0 +1,157 @@
+### Imports
+import requests
+import random
+import time
+import os
+import logging
+import json
+import sys
+
+from dotenv import load_dotenv
+
+### Vars from .env
+load_dotenv()
+
+with open("channels.json", "r", encoding = "utf-8") as f:
+    channels = json.load(f)
+
+### Logger
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
+formatter = logging.Formatter('%(asctime)s | %(levelname)s | %(message)s')
+
+file_handler = logging.FileHandler('bot.log')
+file_handler.setFormatter(formatter)
+logger.addHandler(file_handler)
+
+stream_handler = logging.StreamHandler()
+stream_handler.setFormatter(formatter)
+logger.addHandler(stream_handler)
+
+### Global variables
+AUTH_TOKEN = os.getenv("AUTH_TOKEN")
+
+### Token control
+if not AUTH_TOKEN:
+    logger.error("AUTH_TOKEN environment variable is not set!")
+    sys.exit(1)
+
+### Functions
+def sendPost(channel):
+    max_message_retry = 3
+    attempts = 0
+
+    payload = {
+        "content" : channel["message"]
+    }
+
+    headers = {
+        "authorization" : AUTH_TOKEN
+    }
+
+    while attempts < max_message_retry:
+        try:
+            res = requests.post(channel["url"], json=payload, headers=headers)
+
+        except Exception as e:
+            logger.info(f"{channel['channel_name']} Request error: {e}")
+            break
+
+        if res.status_code == 200:
+            logger.info(f"{channel['channel_name']} Message has been sent: {res.status_code}")
+            return True
+
+        elif res.status_code == 401:
+            logger.error(f"The token you have entered is wrong or expired. Please check the token: {res.status_code}")
+            sys.exit(1)
+        
+        elif res.status_code == 403:
+            logger.error(f"403 Forbidden: {res.text}")
+            return "Forbidden"
+
+        elif res.status_code == 429:
+            try:
+                retry_data = res.json()
+                retry_after = retry_data.get("retry_after", 20)
+                code = retry_data.get("code", 0)
+
+                logger.warning(f"{retry_data}")
+
+                if code == 20016:
+                    # Slowmode active
+                    if retry_after > 300:
+                        logger.warning(f"Wait is more than 5 mins. Waiting for 300 seconds anyway.")
+                        time.sleep(300)
+                        attempts += 1
+                        continue
+
+                    logger.warning(f"Slowmode is active in {channel['channel_name']}! Waiting for {retry_after:.2f} seconds.")
+                    time.sleep(retry_after + 20)
+                    attempts += 1
+
+                elif code == 20028:
+                    long_wait = max(retry_after, 60)
+                    attempts += 1
+
+                    if retry_after > 300:
+                        logger.warning(f"Wait is more than 5 mins. Waiting for 300 seconds anyway.")
+                        time.sleep(300)
+                        attempts += 1
+                        continue
+
+                    logger.warning(f"{channel['channel_name']} hit the write rate limit (code 20028). Wait time set to: {long_wait:.2f} seconds. Attempt: {attempts}")
+                    time.sleep(long_wait)
+                
+                else:
+                    attempts += 1
+                    logger.error(f"Bot exceeded rate limit to channel: {channel['channel_name']}! Wait {retry_after:.2f} sec. Retry: {attempts}")
+                    time.sleep(retry_after + 20)
+
+            except Exception as e:
+                logger.info(f"{channel['channel_name']} returned 429 but failed to parse JSON: {e}")
+                break
+                
+        else:
+            logger.info(f"{channel['channel_name']} Error: {res.status_code}")
+            break
+
+    logger.info(f"{channel['channel_name']} Message couldn't send. Maximum retry limit of: ({max_message_retry}) reached.")
+    return None
+    
+
+def update_channels_json():
+    with open("channels.json", "w", encoding = "utf-8") as f:
+        json.dump(channels, f, indent = 4, ensure_ascii = False)
+
+### Main code
+if __name__ == "__main__":
+        sleep = int(input("How many seconds should bot wait before sending texts again: "))
+
+        while True:
+            for channel in channels[:]:
+                interval = random.uniform(30, 180)
+                roll = random.randint(0, 100)
+
+                if channel['chance'] >= roll:
+                    success = sendPost(channel)
+
+                    if success == "Forbidden":
+                        logger.info(f"Erasing {channel['channel_name']} because code 403.")
+                        channels.remove(channel)
+                        update_channels_json()
+                        continue
+
+                    elif success == True:
+                        logger.info(f"The next message will be sent in {interval:.2f} seconds.")
+
+                    else:
+                        logger.warning(f"Failed to send message to {channel['channel_name']}, skipping this time.")
+
+                else:
+                    logger.info(f"Roll number {roll} came up; skipping post for: {channel['channel_name']} this time.")
+
+                time.sleep(interval)
+
+            logger.info(f"All messages have been sent. The script will wait for {(sleep)/60:.2f} minutes before continuing.")
+            time.sleep(sleep)

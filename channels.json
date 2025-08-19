@@ -1,0 +1,14 @@
+[
+    {
+        "channel_name": "tessstttt channelll",
+        "url": "https://discord.com/api/v9/channels/CHANNEL_ID/messages",
+        "message": "hey, this is a test message",
+        "chance": 100
+    },
+    {
+        "channel_name": "secret",
+        "url": "https://discord.com/api/v9/channels/CHANNEL_ID/messages",
+        "message": "Ferrari by the neighbourhood",
+        "chance": 100
+    }
+]

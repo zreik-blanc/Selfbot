@@ -12,9 +12,6 @@ from dotenv import load_dotenv
 ### Vars from .env
 load_dotenv()
 
-with open("channels.json", "r", encoding = "utf-8") as f:
-    channels = json.load(f)
-
 ### Logger
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -86,13 +83,12 @@ def sendPost(channel):
                         attempts += 1
                         continue
 
+                    attempts += 1
                     logger.warning(f"Slowmode is active in {channel['channel_name']}! Waiting for {retry_after:.2f} seconds.")
                     time.sleep(retry_after + 20)
-                    attempts += 1
 
                 elif code == 20028:
                     long_wait = max(retry_after, 60)
-                    attempts += 1
 
                     if retry_after > 300:
                         logger.warning(f"Wait is more than 5 mins. Waiting for 300 seconds anyway.")
@@ -100,6 +96,7 @@ def sendPost(channel):
                         attempts += 1
                         continue
 
+                    attempts += 1
                     logger.warning(f"{channel['channel_name']} hit the write rate limit (code 20028). Wait time set to: {long_wait:.2f} seconds. Attempt: {attempts}")
                     time.sleep(long_wait)
                 
@@ -120,17 +117,44 @@ def sendPost(channel):
     return None
     
 
-def update_channels_json():
-    with open("channels.json", "w", encoding = "utf-8") as f:
+def update_channels_json(file_name, channels):
+    with open(file_name, "w", encoding = "utf-8") as f:
         json.dump(channels, f, indent = 4, ensure_ascii = False)
 
 ### Main code
 if __name__ == "__main__":
-        sleep = int(input("How many seconds should bot wait before sending texts again: "))
+        try:
+            print("--" * 30)
+            sleep = int(input("How many seconds should bot wait before sending texts again: "))
+
+        except ValueError:
+            logger.error("Please enter a valid number for sleep time.")
+            sys.exit(1)
+
+        print("Available files in the current directory:")
+                   
+        for file in os.listdir():
+            if file.endswith(".json"):
+                print(f"{file}")
+        
+        print("--" * 30)
+        file_name = input("Enter the file name you want to use: ")
+
+        try:
+            if file_name.endswith(".json"):
+                with open(file_name, "r", encoding = "utf-8") as f:
+                    channels = json.load(f)
+            else:
+                logger.error("Please enter the file name with .json extension (e.g. channels.json).")
+                sys.exit(1)
+
+        except FileNotFoundError:
+            logger.error(f"File {file_name} not found. Please check the file name and try again.")
+            sys.exit(1)
 
         while True:
             for channel in channels[:]:
-                interval = random.uniform(30, 180)
+                interval = random.uniform(10, 20)
                 roll = random.randint(0, 100)
 
                 if channel['chance'] >= roll:
@@ -139,7 +163,7 @@ if __name__ == "__main__":
                     if success == "Forbidden":
                         logger.info(f"Erasing {channel['channel_name']} because code 403.")
                         channels.remove(channel)
-                        update_channels_json()
+                        update_channels_json(file_name, channels)
                         continue
 
                     elif success == True:

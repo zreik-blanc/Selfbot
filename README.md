@@ -33,7 +33,12 @@ https://github.com/zreik-blanc/Selfbot.git
 - Open the venv
 ```python
 python -m venv .venv
-\scripts\activate.ps1
+
+# Activate on Windows:
+.venv\Scripts\activate
+
+# Activate on macOS/Linux:
+source .venv/bin/activate
 ```
 - Use the command:
 ```python

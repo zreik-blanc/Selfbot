@@ -121,61 +121,120 @@ def update_channels_json(file_name, channels):
     with open(file_name, "w", encoding = "utf-8") as f:
         json.dump(channels, f, indent = 4, ensure_ascii = False)
 
-### Main code
-if __name__ == "__main__":
-        try:
+def main_code():
+    try:
             print("--" * 30)
             sleep = int(input("How many seconds should bot wait before sending texts again: "))
 
-        except ValueError:
+    except ValueError:
             logger.error("Please enter a valid number for sleep time.")
             sys.exit(1)
 
-        print("Available files in the current directory:")
-                   
-        for file in os.listdir():
-            if file.endswith(".json"):
-                print(f"{file}")
-        
-        print("--" * 30)
-        file_name = input("Enter the file name you want to use: ")
+    print("Available files in the current directory:")
 
-        try:
-            if file_name.endswith(".json"):
-                with open(file_name, "r", encoding = "utf-8") as f:
-                    channels = json.load(f)
-            else:
-                logger.error("Please enter the file name with .json extension (e.g. channels.json).")
-                sys.exit(1)
+    for file in os.listdir():
+        if file.endswith(".json"):
+            print(f"{file}")
 
-        except FileNotFoundError:
-            logger.error(f"File {file_name} not found. Please check the file name and try again.")
+    print("--" * 30)
+    file_name = input("Enter the file name you want to use: ")
+    print("--" * 30)
+
+    try:
+        if file_name.endswith(".json"):
+            with open(file_name, "r", encoding = "utf-8") as f:
+                channels = json.load(f)
+        else:
+            logger.error("Please enter the file name with .json extension (e.g. channels.json).")
             sys.exit(1)
 
-        while True:
-            for channel in channels[:]:
-                interval = random.uniform(10, 20)
-                roll = random.randint(0, 100)
+    except FileNotFoundError:
+        logger.error(f"File {file_name} not found. Please check the file name and try again.")
+        sys.exit(1)
 
-                if channel['chance'] >= roll:
-                    success = sendPost(channel)
+    while True:
+        for channel in channels[:]:
+            interval = random.uniform(10, 20)
+            roll = random.randint(0, 100)
 
-                    if success == "Forbidden":
-                        logger.info(f"Erasing {channel['channel_name']} because code 403.")
-                        channels.remove(channel)
-                        update_channels_json(file_name, channels)
-                        continue
+            if channel['chance'] >= roll:
+                success = sendPost(channel)
 
-                    elif success == True:
-                        logger.info(f"The next message will be sent in {interval:.2f} seconds.")
+                if success == "Forbidden":
+                    logger.info(f"Erasing {channel['channel_name']} because code 403.")
+                    channels.remove(channel)
+                    update_channels_json(file_name, channels)
+                    continue
 
-                    else:
-                        logger.warning(f"Failed to send message to {channel['channel_name']}, skipping this time.")
+                elif success == True:
+                    logger.info(f"The next message will be sent in {interval:.2f} seconds.")
 
                 else:
-                    logger.info(f"Roll number {roll} came up; skipping post for: {channel['channel_name']} this time.")
+                    logger.warning(f"Failed to send message to {channel['channel_name']}, skipping this time.")
 
-                time.sleep(interval)
+            else:
+                logger.info(f"Roll number {roll} came up; skipping post for: {channel['channel_name']} this time.")
 
-            logger.info(f"All messages have been sent. The script will wait for {(sleep)/60:.2f} minutes before continuing.")
-            time.sleep(sleep)
+            time.sleep(interval)
+
+        logger.info(f"All messages have been sent. The script will wait for {(sleep)/60:.2f} minutes before continuing.")
+        time.sleep(sleep)
+            
+
+def add_channel():
+    print("Available files in the current directory:")
+
+    for file in os.listdir():
+        if file.endswith(".json"):
+            print(f"{file}")
+
+    print("--" * 30)
+    file_name = input("Enter the file name that you want to add new channel: ")
+    print("--" * 30)
+
+    try:
+        if file_name.endswith(".json"):
+            with open(file_name, "r", encoding="utf-8") as f:
+                channels = json.load(f)
+        else:
+            logger.error("Please enter the file name with .json extension (e.g. channels.json).")
+            sys.exit(1)  
+    except FileNotFoundError:
+        logger.error(f"File {file_name} not found. Please check the file name and try again.")
+        sys.exit(1)
+
+    channel_name = input("Please enter the discord channel's name: ").strip()
+    channel_id = int(input("Please enter the discord channel id: ").strip())
+    channel_message = input("Please enter the message in 1 line (use \\n for new lines): ").replace("\\n", "\n")
+    message_chance = int(input("Please enter the chance of text (must be between 0 - 100): ").strip())
+
+    new_channel = {
+        "channel_name": channel_name,
+        "url": f"https://discord.com/api/v9/channels/{channel_id}/messages",
+        "message": channel_message,
+        "chance": message_chance
+    }
+
+    channels.append(new_channel)
+
+    with open(file_name, "w", encoding="utf-8") as f:
+        json.dump(channels, f, indent=4, ensure_ascii=False)
+
+    logger.info(f"Added new channel {channel_name} to {file_name}.")
+
+
+### Main code
+if __name__ == "__main__":
+        choice = int(input("Welcome to the Selfbot!\nPlease enter what you want do do:\n1. Start the bot.\n2. Add new channel\nWhat would you like to do: "))
+
+        match choice:
+            case 1:
+                main_code()
+            case 2:
+                add_channel()
+            case _:
+                print("Please choose either 1 or 2")  
+                sys.exit(1)        
+
+
+        

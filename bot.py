@@ -43,8 +43,28 @@ def sendPost(channel):
         "content" : channel["message"]
     }
 
+    user_agents = [
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15"
+    ]
+
     headers = {
-        "authorization" : AUTH_TOKEN
+        "authorization": AUTH_TOKEN,
+        "user-agent": random.choice(user_agents),
+        "content-type": "application/json",
+        "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "accept-language": "en-US,en;q=0.5",
+        "accept-encoding": "gzip, deflate",
+        "connection": "keep-alive",
+        "origin": "https://discord.com",
+        "referer": f"https://discord.com/channels/{channel["channel_id"]}/{channel["channel_id"]}",
+        "sec-fetch-dest": "empty",
+        "sec-fetch-mode": "cors",
+        "sec-fetch-site": "same-origin",
+        "x-debug-options": "bugReporterEnabled",
+        "upgrade-insecure-requests": "1"
     }
 
     while attempts < max_message_retry:
@@ -211,6 +231,7 @@ def add_channel():
     new_channel = {
         "channel_name": channel_name,
         "url": f"https://discord.com/api/v9/channels/{channel_id}/messages",
+        "channel_id": channel_id,
         "message": channel_message,
         "chance": message_chance
     }

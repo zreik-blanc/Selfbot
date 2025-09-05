@@ -8,9 +8,18 @@ import json
 import sys
 
 from dotenv import load_dotenv
+from pathlib import Path
 
-### Vars from .env
-load_dotenv()
+# Get .env file path FIRST
+if getattr(sys, 'frozen', False):
+    application_path = os.path.dirname(sys.executable)
+else:
+    application_path = os.path.dirname(os.path.abspath(__file__))
+
+env_path = Path(application_path) / '.env'
+
+# Load .env with specific path
+load_dotenv(env_path)
 
 ### Logger
 logger = logging.getLogger()
@@ -18,7 +27,7 @@ logger.setLevel(logging.INFO)
 
 formatter = logging.Formatter('%(asctime)s | %(levelname)s | %(message)s')
 
-file_handler = logging.FileHandler('bot.log')
+file_handler = logging.FileHandler(os.path.join(application_path, 'bot.log'))
 file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 
@@ -32,6 +41,22 @@ AUTH_TOKEN = os.getenv("AUTH_TOKEN")
 ### Token control
 if not AUTH_TOKEN:
     logger.error("AUTH_TOKEN environment variable is not set!")
+    logger.error(f"Looking for .env file at: {env_path}")
+    logger.error(f"Current working directory: {os.getcwd()}")
+    logger.error(f"Application path: {application_path}")
+    
+    # Manual .env read attempt
+    if env_path.exists():
+        logger.error("Attempting manual .env read...")
+        try:
+            with open(env_path, 'r') as f:
+                lines = f.readlines()
+                for line in lines:
+                    if line.strip().startswith('AUTH_TOKEN'):
+                        logger.error(f"Found AUTH_TOKEN line: {repr(line.strip())}")
+        except Exception as e:
+            logger.error(f"Manual read failed: {e}")
+    
     sys.exit(1)
 
 ### Functions
@@ -246,8 +271,9 @@ def add_channel():
 
 ### Main code
 if __name__ == "__main__":
+    try:
         choice = int(input("Welcome to the Selfbot!\nPlease enter what you want do do:\n1. Start the bot.\n2. Add new channel\nWhat would you like to do: "))
-
+        
         match choice:
             case 1:
                 main_code()
@@ -255,7 +281,8 @@ if __name__ == "__main__":
                 add_channel()
             case _:
                 print("Please choose either 1 or 2")  
-                sys.exit(1)        
-
-
-        
+                sys.exit(1)
+    
+    except Exception as e:
+        logger.exception(f"Program crashed with an error: {e}")
+        input("An error occurred. For details check the log file. Press enter to close the script...")

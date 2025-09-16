@@ -60,7 +60,7 @@ if not AUTH_TOKEN:
     sys.exit(1)
 
 ### Functions
-def sendPost(channel):
+def send_post(channel):
     max_message_retry = 3
     attempts = 0
 
@@ -203,7 +203,7 @@ def main_code():
             roll = random.randint(0, 100)
 
             if channel['chance'] >= roll:
-                success = sendPost(channel)
+                success = send_post(channel)
 
                 if success == "Forbidden":
                     logger.info(f"Erasing {channel['channel_name']} because code 403.")
